@@ -40,11 +40,6 @@ class ZefixSpider(scrapy.Spider):
     name = "zefix"
 
     def start_requests(self):
-        #urls = [
-        #        'https://www.zefix.ch/de/search/entity/list?registryOffice=310&searchTypeExact=true',
-        #]
-        #for url in urls:
-        #    yield scrapy.Request(url=url, callback=self.parse)
         #yield scrapy.Request.from_curl( get_curl(20, 0) )
         for cantonID in cantonIDs.values():
             yield scrapy.Request.from_curl( get_curl(cantonID, 0) )
