@@ -56,15 +56,3 @@ class ZefixSpider(scrapy.Spider):
         #    yield firm
         with open(f'firms_{cantonName}.json','w') as outfile:
             outfile.write(json.dumps(response.json()['list'], indent=2, ensure_ascii=False))
-        #page = 'test' #response.url.split("/")[-2]
-        #filename = f'quotes-{page}.html'
-        #with open(filename, 'wb') as f:
-        #    f.write(response.body)
-        #self.log(f'Saved file {filename}')
-
-        #for quote in response.css('div.quote'):
-        #    yield {
-        #            'text'   : quote.css('span.text::text').get(),
-        #            'author' : quote.css('small.author::text').get(),
-        #            'tags'   : quote.css('div.tags a.tag::text').getall(),
-        #            }
