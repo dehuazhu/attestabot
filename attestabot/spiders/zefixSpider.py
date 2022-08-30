@@ -1,5 +1,5 @@
 import scrapy
-import json
+import json, jsonlines
 from pdb import set_trace
 
 cantonIDs = {
@@ -40,14 +40,20 @@ class ZefixSpider(scrapy.Spider):
     name = "zefix"
 
     def start_requests(self):
-        #yield scrapy.Request.from_curl( get_curl(20, 0) )
+        #yield scrapy.Request.from_curl( get_curl(280, 0) )
         for cantonID in cantonIDs.values():
             yield scrapy.Request.from_curl( get_curl(cantonID, 0) )
 
     def parse(self, response):
         cantonID,   = json.loads(response.request.body.decode('utf-8'))['registryOffices']
         cantonName, = [canton for canton,ID in cantonIDs.items() if cantonID==ID]
-        #for firm in response.json()['list']:
+        response_json = response.json()
+        #for firm in response_json['list']:
         #    yield firm
-        with open(f'firms_{cantonName}.json','w') as outfile:
-            outfile.write(json.dumps(response.json()['list'], indent=2, ensure_ascii=False))
+        #with open(f'firms_{cantonName}.json','w') as outfile:
+        #    outfile.write(json.dumps(response_json['list'], indent=2, ensure_ascii=False))
+        with jsonlines.open(f'firms_{cantonName}.jl', mode='a') as outfile:
+            outfile.write_all(response_json['list'])
+        if response_json['hasMoreResults']:
+            offset = response_json['maxOffset']
+            yield scrapy.Request.from_curl( get_curl(cantonID, offset) )
