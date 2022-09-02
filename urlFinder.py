@@ -3,6 +3,7 @@ import pandas as pd
 import requests as rq
 import os
 import threading
+from numpy import linspace
 from pdb import set_trace
 
 def make_urls(firmName):
@@ -22,38 +23,46 @@ def make_urls(firmName):
         if len(nameList)==1: break
     return possibleUrls
 
-def url_exists(urlsToCheck,validUrls):
+def url_exists(urlsToCheck,idx):
     for url in urlsToCheck:
         try:
             #print(f'trying {url}')
-            response = rq.get(url, allow_redirects=False)
+            response = rq.get(url, allow_redirects=False, timeout=2)
             if response.status_code==200:
-                validUrls.append(url)
+                with open('tmp_urls.txt', 'a+') as f:
+                    f.write(f'{idx},{url}\n')
         except:
             pass
 
+def threadFunc(rows):
+    for idx,firm in rows.iterrows():
+        possibleUrls = make_urls(firm['name'])
+        url_exists(possibleUrls, idx)
+
 
 def main():
-    max_threads = 100
+    max_threads = 64
     files = glob( os.path.join('firms','firms*pkl') )
     for path in files:
-        if not 'AI' in path: continue
         print(f'starting with {path}')
         df = pd.read_pickle(path)
         df['url'] = pd.Series([[] for _ in range(len(df.index))])
+        batches = linspace(0,len(df),max_threads, dtype=int)
         threads = []
-        for idx,firm in df.iterrows():
-            #if idx>10: break
-            possibleUrls = make_urls(firm['name'])
-            t = threading.Thread(target=url_exists, args=(possibleUrls,firm['url']))
+        for start,stop in zip(batches[:-1],batches[1:]):
+            t = threading.Thread(target=threadFunc, args=(df.iloc[start:stop],))
             threads.append(t)
-        #if (idx+1)%max_threads==0 or (idx+1)==len(df):
         for t in threads:
             t.start()
-                #t.join(10)
-            #threads = []
-        set_trace()
-            
+        for t in threads:
+            t.join()
+        with open('tmp_urls.txt') as f:
+            for l in f.readlines():
+                idx,url = l.strip().split(',')
+                df.iloc[int(idx)]['url'].append(url)
+        os.remove('tmp_urls.txt')
+        df.to_pickle(path)
+
 
 if __name__=='__main__':
     main()
