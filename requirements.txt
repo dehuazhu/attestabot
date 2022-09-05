@@ -1,3 +1,9 @@
 scrapy
 json
 jsonlines
+pandas
+requests
+threading
+numpy
+os
+glob
