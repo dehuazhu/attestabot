@@ -64,5 +64,7 @@ class ZefixSpider(scrapy.Spider):
         else:
             with jsonlines.open(os.path.join('firms',f'{outfileName}.jl')) as jlFile:
                 df = pd.DataFrame.from_dict([line for line in jlFile])
+            df.insert(8, 'cantonId', cantonID)
+            df.insert(9, 'canton', cantonName)
             df.to_pickle(os.path.join('firms',f'{outfileName}.pkl'))
             os.remove(os.path.join('firms',f'{outfileName}.jl'))
