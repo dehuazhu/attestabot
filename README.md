@@ -5,7 +5,7 @@ Scraper for `zefix.ch`.
 ## Getting started
 
 ~~~
-git@github.com:zhu-partner/attestabot.git
+git clone git@github.com:zhu-partner/attestabot.git
 cd attestabot
 ~~~
 The scraper works entirely in python. Required packages are listed in `requirements.txt`. A working conda environment can be created through the `environment.yml` file through:
