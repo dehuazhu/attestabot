@@ -26,6 +26,7 @@ dependencies:
   - cryptography=37.0.4=py310h597c629_0
   - cssselect=1.1.0=py_0
   - decorator=5.1.1=pyhd8ed1ab_0
+  - et_xmlfile=1.1.0=py310h06a4308_0
   - executing=1.0.0=pyhd8ed1ab_0
   - filelock=3.8.0=pyhd8ed1ab_0
   - hyperlink=21.0.0=pyhd3deb0d_0
@@ -61,6 +62,7 @@ dependencies:
   - numexpr=2.8.3=py310hcea2de6_0
   - numpy=1.23.1=py310h1794996_0
   - numpy-base=1.23.1=py310hcba007f_0
+  - openpyxl=3.0.10=py310h5eee18b_0
   - openssl=1.1.1q=h7f8727e_0
   - packaging=21.3=pyhd3eb1b0_0
   - pandas=1.4.3=py310h6a678d5_0
