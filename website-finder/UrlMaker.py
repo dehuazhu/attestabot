@@ -1,4 +1,5 @@
 import itertools
+from pdb import set_trace
 
 class UrlMaker:
 
@@ -6,7 +7,6 @@ class UrlMaker:
         url_joins = ('', '-')
         TLDs     = ('ch','com')
 
-        possible_urls = []
         firm_name = firm_name.lower()
         name_as_list = firm_name.split(' ')
         if name_as_list[-1] in ('liquidazione','liquidation'):
@@ -21,6 +21,5 @@ class UrlMaker:
                 baseUrl = join.join(partial_name_list)
                 for tld in TLDs:
                     url = f'http://{baseUrl}.{tld}'
-                    possible_urls.append(url)
+                    yield url
                 if len(partial_name_list)==1: break
-        return possible_urls
