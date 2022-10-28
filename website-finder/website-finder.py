@@ -4,26 +4,8 @@ import requests as rq
 import os
 import threading
 from numpy import linspace
+from UrlMaker import UrlMaker
 from pdb import set_trace
-
-def make_urls(firmName):
-    urlJoins = ('', '-')
-    TLDs     = ('ch','com')
-
-    possibleUrls = []
-    firmName = firmName.lower()
-    nameList = firmName.split(' ')
-    if nameList[-1] in ('liquidazione','liquidation'):
-        nameList = nameList[:-2] # remove 'in liquidazione', 'in liquidation', 'en liquidation'
-    if nameList[-1] in ('sagl','sa','ag','gmbh','sàrl'):
-        nameList = nameList[:-1]
-    for join in urlJoins:
-        baseUrl = join.join(nameList)
-        for tld in TLDs:
-            url = f'http://{baseUrl}.{tld}'
-            possibleUrls.append(url)
-        if len(nameList)==1: break
-    return possibleUrls
 
 def url_exists(urlsToCheck,idx):
     for url in urlsToCheck:
@@ -37,15 +19,16 @@ def url_exists(urlsToCheck,idx):
             pass
 
 def threadFunc(rows):
+    url_maker = UrlMaker()
     for idx,firm in rows.iterrows():
-        possibleUrls = make_urls(firm['name'])
+        possibleUrls = url_maker.make_urls(firm['name'])
         url_exists(possibleUrls, idx)
 
 
 def main():
     max_threads = 128
-    files = glob( os.path.join('firms','firms*pkl') )
-    df = pd.concat([pd.read_pickle( file ) for file in glob( os.path.join('firms','firms*pkl') )], ignore_index=True) # merge everything into a single dataframe
+    files = glob( os.path.join('..', 'firms','firms*pkl') )
+    df = pd.concat([pd.read_pickle(file) for file in files], ignore_index=True) # merge everything into a single dataframe
     df['url'] = pd.Series([[] for _ in range(len(df.index))])
     batches = linspace(0,len(df),max_threads, dtype=int)
     threads = []
