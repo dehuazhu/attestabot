@@ -7,8 +7,8 @@ from numpy import linspace
 from UrlMaker import UrlMaker
 from pdb import set_trace
 
-def url_exists(urlsToCheck,idx):
-    for url in urlsToCheck:
+def url_exists(urls_to_check,idx):
+    for url in urls_to_check:
         try:
             #print(f'trying {url}')
             response = rq.get(url, allow_redirects=False, timeout=3)
@@ -21,8 +21,8 @@ def url_exists(urlsToCheck,idx):
 def threadFunc(rows):
     url_maker = UrlMaker()
     for idx,firm in rows.iterrows():
-        possibleUrls = url_maker.make_urls(firm['name'])
-        url_exists(possibleUrls, idx)
+        possible_urls = url_maker.make_urls(firm['name'])
+        url_exists(possible_urls, idx)
 
 
 def main():
