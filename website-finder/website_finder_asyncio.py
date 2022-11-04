@@ -55,7 +55,7 @@ def add_urls_to_dataframe(df):
 
 def main():
     today = datetime.strftime(datetime.now(), '%Y-%m-%d')
-    files = glob( os.path.join('..', 'firms','firms_AI*pkl') )
+    files = glob( os.path.join('..', 'firms','firms*pkl') )
     for pkl_file in files:
         df = pd.read_pickle(pkl_file)
         df = add_urls_to_dataframe(df)
@@ -63,9 +63,8 @@ def main():
         for idx,url_exists in valid_urls:
             df.iloc[int(idx)]['url_exists'] = url_exists
             df.iloc[int(idx)]['url_checked_on'] = today
-        df.to_excel( 'testAI.xlsx')
-        #df.to_pickle( pkl_file )
-        #df.to_excel( pkl_file.replace('.pkl', '.xlsx') )
+        df.to_pickle( pkl_file )
+        df.to_excel( pkl_file.replace('.pkl', '.xlsx') )
 
 
 if __name__=='__main__':
