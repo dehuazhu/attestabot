@@ -6,6 +6,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from attestabot.spiders.WebsiteFinder import WebsiteFinder
 from website_finder.UrlMaker import UrlMaker
+from pdb import set_trace
 
 
 def add_urls_to_dataframe_kernel(df):
@@ -18,6 +19,8 @@ def add_urls_to_dataframe_kernel(df):
             new_row.url_exists = None
             new_row.url_checked_on = None
             new_rows.append(new_row.to_frame().T)
+    if len(new_rows)==0:
+        return None
     return pd.concat(new_rows)
 
 
@@ -67,10 +70,10 @@ def main():
         for site in jl_file:
             try:
                 assert(site['url'] == df_dict[site['pkl_file']].iloc[site['df_index']].url)
+                df_dict[site['pkl_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
             except:
                 logging.warning(f'index {site["df_index"]} not matching for {site["pkl_file"]}')
                 continue
-            df_dict[site['pkl_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
 
     logging.info('done writing existing urls to df, will now write to disk and finish')
     today = datetime.strftime(datetime.now(), '%Y-%m-%d')
