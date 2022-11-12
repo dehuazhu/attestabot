@@ -9,6 +9,14 @@ from website_finder.UrlMaker import UrlMaker
 from pdb import set_trace
 
 
+def finalize_and_save_dataframe(pkl_outfile, df):
+    df.loc[df.url_exists.isna(), 'url_exists'] = 'FALSE'
+    df.loc[df.url_checked_on.isna(), 'url_checked_on'] = today
+    df.to_pickle( pkl_outfile )
+    df.to_excel( pkl_outfile.replace('.pkl', '.xlsx') )
+    del df
+
+
 def add_urls_to_dataframe_kernel(df):
     url_maker = UrlMaker()
     new_rows  = []
@@ -50,7 +58,7 @@ def main():
     crawler_settings['COOKIES_ENABLED']      = False
     crawler_settings['RETRY_ENABLED']        = False
     crawler_settings['FEEDS']                = {
-            'tmp_out.jl' : {'format': 'jsonlines'}
+            'existing_urls.jl' : {'format': 'jsonlines'}
             }
     crawler_process = CrawlerProcess(crawler_settings)
 
@@ -66,7 +74,7 @@ def main():
 
     logging.info('done crawling, will now write existing urls to df')
 
-    with jsonlines.open('tmp_out.jl') as jl_file:
+    with jsonlines.open('existing_urls.jl') as jl_file:
         for site in jl_file:
             try:
                 assert(site['url'] == df_dict[site['pkl_file']].iloc[site['df_index']].url)
@@ -77,11 +85,8 @@ def main():
 
     logging.info('done writing existing urls to df, will now write to disk and finish')
     today = datetime.strftime(datetime.now(), '%Y-%m-%d')
-    for pkl_file,df in df_dict.items():
-        df.loc[df.url_exists.isna(), 'url_exists'] = 'FALSE'
-        df.loc[df.url_checked_on.isna(), 'url_checked_on'] = today
-        df.to_pickle( pkl_file )
-        df.to_excel( pkl_file.replace('.pkl', '.xlsx') )
+    with multiprocessing.Pool() as pool:
+        pool.starmap(finalize_and_save_dataframe, df_dict.items())
     logging.info('all done')
 
 
