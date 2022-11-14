@@ -73,7 +73,7 @@ class IsoFinder(CrawlSpider):
 
     def __init__(self, *args, **kwargs):
         super(IsoFinder, self).__init__(*args, **kwargs)
-        #self.pkl_file       = kwargs.get('pkl_file')
+        self.pkl_file        = kwargs.get('pkl_file')
         self.request_counter = {}
         self.hit_counter     = {}
 
@@ -122,35 +122,30 @@ class IsoFinder(CrawlSpider):
 
     def parse_item(self, response):
         if hasattr(response, 'text'):
+            item = {
+                    'pkl_file'  : self.pkl_file,
+                    'name'      : response.meta['name'],
+                    'start_url' : response.meta['start_url'],
+                    'found_url' : response.url,
+                    }
             hostname = urlparse(response.url).hostname
-            for link_to_file in (link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))):
-                yield {
-                        'name'      : response.meta['name'],
-                        'start_url' : response.meta['start_url'],
-                        'found_url' : response.url,
-                        'payload'   : response.urljoin(link_to_file),
-                        }
             if sum(self.hit_counter[hostname].values())<MAX_HITS_PER_HOST_TOTAL:
+                self.hit_counter[hostname]['page_with_file'] += 1
+                for link_to_file in (link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))):
+                    item['payload'] = response.urljoin(link_to_file)
+                    yield item
                 if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
                     self.hit_counter[hostname]['page_with_kw'] += 1
                     #if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
                     logging.debug(f'found page with keyword at {response.url}')
-                    yield {
-                            'name'      : response.meta['name'],
-                            'start_url' : response.meta['start_url'],
-                            'found_url' : response.url,
-                            'payload'   : 'has_keyword',
-                            }
+                    item['payload'] = 'has_keyword'
+                    yield item
                 if any(link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE)):
                     self.hit_counter[hostname]['page_with_logo'] += 1
                     #if self.hit_counter[hostname]['page_with_logo']<=MAX_HITS_PER_HOST_PAGE_WITH_IMG:
                     logging.debug(f'found page with logo at {response.url}')
-                    yield {
-                            'name'      : response.meta['name'],
-                            'start_url' : response.meta['start_url'],
-                            'found_url' : response.url,
-                            'payload'   : 'has_logo',
-                            }
+                    item['payload'] = 'has_logo'
+                    yield item
 
     def parse_start_url(self, response):
         return self.parse_item(response)
