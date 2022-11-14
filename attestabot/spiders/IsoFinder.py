@@ -31,6 +31,8 @@ class IsoFinder(CrawlSpider):
     name = 'iso-finder'
 
     custom_settings = {
+            'CONCURRENT_REQUESTS'    : 200,
+            'DOWNLOAD_DELAY'         : .25,
             #'ROBOTSTXT_OBEY'         : False,
             'LOG_LEVEL'              : 'INFO',
             'DEPTH_LIMIT'            : 4,
@@ -128,14 +130,22 @@ class IsoFinder(CrawlSpider):
             for link_to_file in [link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))]:
                 if not link_to_file in self.found_files[hostname]:
                     self.found_files[hostname] += [link_to_file]
-                    #yield {'page_with_file' : (response.url, response.urljoin(link_to_file))}
-                    yield { response.meta['name'] : (response.url, response.urljoin(link_to_file))}
+                    yield {
+                            'name'      : response.meta['name'],
+                            'start_url' : response.meta['start_url'],
+                            'found_url' : response.url,
+                            'payload'   : response.urljoin(link_to_file),
+                            }
             if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
                 self.hit_counter[hostname]['page_with_kw'] += 1
                 if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
                     logging.debug(f'found page with keyword at {response.url}')
-                    #yield {'page_with_keyword' : response.url}
-                    yield { response.meta['name'] : (response.url, 'has_keyword')}
+                    yield {
+                            'name'      : response.meta['name'],
+                            'start_url' : response.meta['start_url'],
+                            'found_url' : response.url,
+                            'payload'   : 'has_keyword',
+                            }
             if any(imgs := [link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE)]):
                 if any(img not in self.found_imgs[hostname] for img in imgs):
                     self.hit_counter[hostname]['page_with_logo'] += 1
@@ -144,8 +154,12 @@ class IsoFinder(CrawlSpider):
                             if found_img not in self.found_imgs[hostname]:
                                 self.found_imgs[hostname] += [found_img]
                         logging.debug(f'found page with logo at {response.url}')
-                        #yield {'page_with_logo' : response.url}
-                        yield { response.meta['name'] : (response.url, 'has_logo')}
+                        yield {
+                                'name'      : response.meta['name'],
+                                'start_url' : response.meta['start_url'],
+                                'found_url' : response.url,
+                                'payload'   : 'has_logo',
+                                }
 
     def parse_start_url(self, response):
         return self.parse_item(response)
