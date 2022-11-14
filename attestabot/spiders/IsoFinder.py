@@ -6,8 +6,8 @@ import pandas as pd
 from urllib.parse import urlparse
 from pdb import set_trace
 
-MAX_HITS_PER_HOST_PAGE_WITH_KW  = 10
-MAX_HITS_PER_HOST_PAGE_WITH_IMG = 5
+#MAX_HITS_PER_HOST_PAGE_WITH_KW  = 10
+#MAX_HITS_PER_HOST_PAGE_WITH_IMG = 5
 MAX_HITS_PER_HOST_TOTAL         = 20
 MAX_REQUESTS_PER_HOST           = 700
 
@@ -130,9 +130,10 @@ class IsoFinder(CrawlSpider):
                         'found_url' : response.url,
                         'payload'   : response.urljoin(link_to_file),
                         }
-            if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
-                self.hit_counter[hostname]['page_with_kw'] += 1
-                if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
+            if sum(self.hit_counter[hostname].values())<MAX_HITS_PER_HOST_TOTAL:
+                if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
+                    self.hit_counter[hostname]['page_with_kw'] += 1
+                    #if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
                     logging.debug(f'found page with keyword at {response.url}')
                     yield {
                             'name'      : response.meta['name'],
@@ -140,9 +141,9 @@ class IsoFinder(CrawlSpider):
                             'found_url' : response.url,
                             'payload'   : 'has_keyword',
                             }
-            if any(link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE)):
-                self.hit_counter[hostname]['page_with_logo'] += 1
-                if self.hit_counter[hostname]['page_with_logo']<=MAX_HITS_PER_HOST_PAGE_WITH_IMG:
+                if any(link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE)):
+                    self.hit_counter[hostname]['page_with_logo'] += 1
+                    #if self.hit_counter[hostname]['page_with_logo']<=MAX_HITS_PER_HOST_PAGE_WITH_IMG:
                     logging.debug(f'found page with logo at {response.url}')
                     yield {
                             'name'      : response.meta['name'],
