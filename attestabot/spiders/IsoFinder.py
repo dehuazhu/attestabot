@@ -34,6 +34,7 @@ class IsoFinder(CrawlSpider):
             'CONCURRENT_REQUESTS'    : 200,
             'DOWNLOAD_DELAY'         : .25,
             #'ROBOTSTXT_OBEY'         : False,
+            'DOWNLOAD_TIMEOUT'       : 15,
             'LOG_LEVEL'              : 'INFO',
             'DEPTH_LIMIT'            : 4,
             'DEPTH_PRIORITY'         : 1,
@@ -82,7 +83,7 @@ class IsoFinder(CrawlSpider):
         #for url in df.query('url_exists=="TRUE"').url:
         for url in (
                 'https://wettstein-produktion.ch/', # ok
-                'https://juice.world/', #finds way too many links
+                'https://juice.world/', #ok
                 'http://www.designwerk.com/', #error 510
                 'https://www.alz-maschinen.ch/', #ok, needs DEPTH_LIMIT=2
                 'https://aa-praezisionsmechanik.ch/', #no: contains only a png with no keyword in the file name and no reference to keywords in the text
@@ -130,10 +131,11 @@ class IsoFinder(CrawlSpider):
                     }
             hostname = urlparse(response.url).hostname
             if sum(self.hit_counter[hostname].values())<MAX_HITS_PER_HOST_TOTAL:
-                self.hit_counter[hostname]['page_with_file'] += 1
-                for link_to_file in (link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))):
-                    item['payload'] = response.urljoin(link_to_file)
-                    yield item
+                if any(files := [link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))]):
+                    self.hit_counter[hostname]['page_with_file'] += 1
+                    for link_to_file in files:
+                        item['payload'] = response.urljoin(link_to_file)
+                        yield item
                 if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
                     self.hit_counter[hostname]['page_with_kw'] += 1
                     #if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
