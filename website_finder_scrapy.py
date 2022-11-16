@@ -8,12 +8,21 @@ from attestabot.spiders.WebsiteFinder import WebsiteFinder
 from website_finder.UrlMaker import UrlMaker
 from pdb import set_trace
 
+OUTFILE_RAW   = 'website_finder_raw.jl'
+INPUT_FOLDER  = 'firms_vanilla'
+OUTPUT_FOLDER = 'firms_website_finder'
+LOGFILE       = 'website_finder.log'
 
 def finalize_and_save_dataframe(pkl_outfile, df):
+    today = datetime.strftime(datetime.now(), '%Y-%m-%d')
     df.loc[df.url_exists.isna(), 'url_exists'] = 'FALSE'
     df.loc[df.url_checked_on.isna(), 'url_checked_on'] = today
-    df.to_pickle( pkl_outfile )
-    df.to_excel( pkl_outfile.replace('.pkl', '.xlsx') )
+
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    outfile = os.path.basename(pkl_infile)
+    outfile = os.path.join(OUTPUT_FOLDER, outfile)
+    df.to_pickle( outfile )
+    df.to_excel( outfile.replace('.pkl', '.xlsx') )
     del df
 
 
@@ -46,7 +55,6 @@ def add_urls_to_dataframe(df):
 
 
 def main():
-    LOGFILE = 'website_finder.log'
     crawler_settings = get_project_settings()
     crawler_settings['DOWNLOAD_TIMEOUT']     = 15
     crawler_settings['FEED_EXPORT_ENCODING'] = 'utf-8'
@@ -58,15 +66,16 @@ def main():
     crawler_settings['COOKIES_ENABLED']      = False
     crawler_settings['RETRY_ENABLED']        = False
     crawler_settings['FEEDS']                = {
-            'existing_urls.jl' : {'format': 'jsonlines'}
+            OUTFILE_RAW : {'format': 'jsonlines'}
             }
     crawler_process = CrawlerProcess(crawler_settings)
 
-    files = glob( os.path.join('firms','firms*pkl') )
+    files = glob( os.path.join('firms_vanilla','firms*pkl') )
     df_dict = {}
     for pkl_file in files:
         df = pd.read_pickle(pkl_file)
         logging.info(f'loading {pkl_file}, with {len(set(df["name"]))} firms')
+        df_dict[pkl_file] = df
         df_dict[pkl_file] = add_urls_to_dataframe(df)
         df_dict[pkl_file].to_pickle( pkl_file )
         crawler_process.crawl(WebsiteFinder, pkl_file=pkl_file)
@@ -74,17 +83,14 @@ def main():
 
     logging.info('done crawling, will now write existing urls to df')
 
-    with jsonlines.open('existing_urls.jl') as jl_file:
+    with jsonlines.open(OUTFILE_RAW) as jl_file:
         for site in jl_file:
-            try:
-                assert(site['url'] == df_dict[site['pkl_file']].iloc[site['df_index']].url)
+            if site['url'] == df_dict[site['pkl_file']].iloc[site['df_index']].url:
                 df_dict[site['pkl_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
-            except:
+            else:
                 logging.warning(f'index {site["df_index"]} not matching for {site["pkl_file"]}')
-                continue
 
     logging.info('done writing existing urls to df, will now write to disk and finish')
-    today = datetime.strftime(datetime.now(), '%Y-%m-%d')
     with multiprocessing.Pool() as pool:
         pool.starmap(finalize_and_save_dataframe, df_dict.items())
     logging.info('all done')
