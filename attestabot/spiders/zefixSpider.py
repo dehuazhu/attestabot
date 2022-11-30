@@ -3,6 +3,8 @@ import os, json, jsonlines
 import pandas as pd
 from pdb import set_trace
 
+OUTDIR = 'firms_zefix'
+
 cantonIDs = {
         'AG' : 400,
         'AI' : 310,
@@ -41,8 +43,8 @@ class ZefixSpider(scrapy.Spider):
     name = 'zefix'
 
     def start_requests(self):
-        if not os.path.exists('firms'):
-            os.makedirs('firms')
+        if not os.path.exists(OUTDIR):
+            os.makedirs(OUTDIR)
         #yield scrapy.Request.from_curl( get_curl(280, 0) )
         for cantonID in cantonIDs.values():
             yield scrapy.Request.from_curl( get_curl(cantonID, 0) )
@@ -56,15 +58,15 @@ class ZefixSpider(scrapy.Spider):
         #    yield firm
         #with open(f'firms_{cantonName}.json','w') as outfile:
         #    outfile.write(json.dumps(response_json['list'], indent=2, ensure_ascii=False))
-        with jsonlines.open(os.path.join('firms',f'{outfileName}.jl'), mode='a') as outfile:
+        with jsonlines.open(os.path.join(OUTDIR,f'{outfileName}.jl'), mode='a') as outfile:
             outfile.write_all(response_json['list'])
         if response_json['hasMoreResults']:
             offset = response_json['maxOffset']
             yield scrapy.Request.from_curl( get_curl(cantonID, offset) )
         else:
-            with jsonlines.open(os.path.join('firms',f'{outfileName}.jl')) as jlFile:
+            with jsonlines.open(os.path.join(OUTDIR,f'{outfileName}.jl')) as jlFile:
                 df = pd.DataFrame.from_dict([line for line in jlFile])
             df.insert(8, 'cantonId', cantonID)
             df.insert(9, 'canton', cantonName)
-            df.to_pickle(os.path.join('firms',f'{outfileName}.pkl'))
-            os.remove(os.path.join('firms',f'{outfileName}.jl'))
+            df.to_pickle(os.path.join(OUTDIR,f'{outfileName}.pkl'))
+            os.remove(os.path.join(OUTDIR,f'{outfileName}.jl'))
