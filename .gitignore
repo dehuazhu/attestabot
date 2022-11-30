@@ -1,5 +1,10 @@
 *.json
 *.swp
+*.jl
+firms*
+*.pkl
+*.xlsx
+*.docx
 
 # Byte-compiled / optimized / DLL files
 __pycache__
