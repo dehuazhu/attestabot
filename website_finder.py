@@ -5,11 +5,11 @@ from datetime import datetime
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from attestabot.spiders.WebsiteFinder import WebsiteFinder
-from website_finder.UrlMaker import UrlMaker
+from UrlMaker import UrlMaker
 from pdb import set_trace
 
 OUTFILE_RAW   = 'website_finder_raw.jl'
-INPUT_FOLDER  = 'firms_vanilla'
+INPUT_FOLDER  = 'firms_zefix'
 OUTPUT_FOLDER = 'firms_website_finder'
 LOGFILE       = 'website_finder.log'
 
@@ -91,8 +91,10 @@ def main():
                 logging.warning(f'index {site["df_index"]} not matching for {site["pkl_file"]}')
 
     logging.info('done writing existing urls to df, will now write to disk and finish')
-    with multiprocessing.Pool() as pool:
-        pool.starmap(finalize_and_save_dataframe, df_dict.items())
+    for pkl_outfile, df in df_dict.items():
+        finalize_and_save_dataframe(pkl_outfile, df)
+    #with multiprocessing.Pool() as pool:
+    #    pool.starmap(finalize_and_save_dataframe, df_dict.items())
     logging.info('all done')
 
 
