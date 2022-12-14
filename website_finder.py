@@ -14,16 +14,16 @@ INPUT_FOLDER  = 'firms_website_finder'
 OUTPUT_FOLDER = 'firms_website_finder'
 LOGFILE       = 'website_finder.log'
 
-def finalize_and_save_dataframe(pkl_infile, df):
+def finalize_and_save_dataframe(parquet_infile, df):
     today = datetime.strftime(datetime.now(), '%Y-%m-%d')
     df.loc[df.url_exists.isna(), 'url_exists'] = 'FALSE'
     df.loc[df.url_checked_on.isna(), 'url_checked_on'] = today
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    outfile = os.path.basename(pkl_infile)
+    outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
-    df.to_pickle( outfile )
-    df.to_excel( outfile.replace('.pkl', '.xlsx') )
+    df.to_parquet( outfile )
+    df.to_excel( outfile.replace('.parquet', '.xlsx') )
     del df
 
 
@@ -56,7 +56,7 @@ def add_urls_to_dataframe(df):
     return df
 
 def crawler_func(files):
-    suffix = 1 if 'firms_FR.pkl' in files else 2
+    suffix = 1 if 'firms_FR.parquet' in files else 2
     outfile = OUTFILE_RAW.replace('.jl',f'_{suffix}.jl')
     crawler_settings = get_project_settings()
     crawler_settings['DOWNLOAD_TIMEOUT']     = 30
@@ -74,69 +74,69 @@ def crawler_func(files):
     crawler_process = CrawlerProcess(crawler_settings)
 
     df_dict = {}
-    for pkl_file in files:
-        pkl_file = os.path.join(INPUT_FOLDER, pkl_file)
-        df = pd.read_pickle(pkl_file)
-        df_dict[pkl_file] = df
-        logging.info(f'loading {pkl_file}, with {len(set(df["name"]))} firms')
-        crawler_process.crawl(WebsiteFinder, pkl_file=pkl_file)
+    for parquet_file in files:
+        parquet_file = os.path.join(INPUT_FOLDER, parquet_file)
+        df = pd.read_parquet(parquet_file)
+        df_dict[parquet_file] = df
+        logging.info(f'loading {parquet_file}, with {len(set(df["name"]))} firms')
+        crawler_process.crawl(WebsiteFinder, parquet_file=parquet_file)
     crawler_process.start()
 
     logging.info(f'done crawling part {suffix}, will now write existing urls to df')
 
     with jsonlines.open(outfile) as jl_file:
         for site in jl_file:
-            if site['url'] == df_dict[site['pkl_file']].iloc[site['df_index']].url:
-                df_dict[site['pkl_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
+            if site['url'] == df_dict[site['parquet_file']].iloc[site['df_index']].url:
+                df_dict[site['parquet_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
             else:
-                logging.warning(f'index {site["df_index"]} not matching for {site["pkl_file"]}')
+                logging.warning(f'index {site["df_index"]} not matching for {site["parquet_file"]}')
 
     logging.info('done writing existing urls to df, will now write to disk and finish')
-    for pkl_infile, df in df_dict.items():
-        finalize_and_save_dataframe(pkl_infile, df)
+    for parquet_infile, df in df_dict.items():
+        finalize_and_save_dataframe(parquet_infile, df)
     #with multiprocessing.Pool() as pool:
     #    pool.starmap(finalize_and_save_dataframe, df_dict.items())
 
 
 def main():
-    #files = glob( os.path.join(INPUT_FOLDER,'firms*pkl') )
-    #for pkl_file in files:
-    #    df = pd.read_pickle(pkl_file)
-    #    logging.info(f'loading {pkl_file}, with {len(set(df["name"]))} firms')
+    #files = glob( os.path.join(INPUT_FOLDER,'firms*parquet') )
+    #for parquet_file in files:
+    #    df = pd.read_parquet(parquet_file)
+    #    logging.info(f'loading {parquet_file}, with {len(set(df["name"]))} firms')
     #    df = add_urls_to_dataframe(df)
-    #    df.to_pickle( pkl_file )
+    #    df.to_parquet( parquet_file )
     #    del df
     files_1 = [
-            'firms_FR.pkl',
-            'firms_NW.pkl',
-            'firms_GE.pkl',
-            'firms_AR.pkl',
-            'firms_TI.pkl',
-            'firms_VS_Central.pkl',
-            'firms_VD.pkl',
-            'firms_BE.pkl',
-            'firms_TG.pkl',
-            'firms_BL.pkl',
-            'firms_UR.pkl',
-            'firms_GR.pkl',
-            'firms_GL.pkl',
-            'firms_SG.pkl'
+            'firms_FR.parquet',
+            'firms_NW.parquet',
+            'firms_GE.parquet',
+            'firms_AR.parquet',
+            'firms_TI.parquet',
+            'firms_VS_Central.parquet',
+            'firms_VD.parquet',
+            'firms_BE.parquet',
+            'firms_TG.parquet',
+            'firms_BL.parquet',
+            'firms_UR.parquet',
+            'firms_GR.parquet',
+            'firms_GL.parquet',
+            'firms_SG.parquet'
             ]
     files_2 = [
-            'firms_BS.pkl',
-            'firms_OW.pkl',
-            'firms_ZH.pkl',
-            'firms_AG.pkl',
-            'firms_AI.pkl',
-            'firms_ZG.pkl',
-            'firms_SH.pkl',
-            'firms_VS_Bas.pkl',
-            'firms_LU.pkl',
-            'firms_SO.pkl',
-            'firms_VS_Ober.pkl',
-            'firms_SZ.pkl',
-            'firms_JU.pkl',
-            'firms_NE.pkl'
+            'firms_BS.parquet',
+            'firms_OW.parquet',
+            'firms_ZH.parquet',
+            'firms_AG.parquet',
+            'firms_AI.parquet',
+            'firms_ZG.parquet',
+            'firms_SH.parquet',
+            'firms_VS_Bas.parquet',
+            'firms_LU.parquet',
+            'firms_SO.parquet',
+            'firms_VS_Ober.parquet',
+            'firms_SZ.parquet',
+            'firms_JU.parquet',
+            'firms_NE.parquet'
             ]
 
     for _ in range(10):
