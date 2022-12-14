@@ -14,7 +14,7 @@ class WebsiteFinder(Spider):
     def start_requests(self):
         pkl_file = self.pkl_file
         df = pd.read_pickle(pkl_file)
-        rows_to_check = (df.url_exists.isna())
+        rows_to_check = (df.url_exists.isna()) | (df.url_exists=='FALSE')
         for idx,firm in df[rows_to_check].iterrows():
             meta = {
                     'pkl_file' : pkl_file,
