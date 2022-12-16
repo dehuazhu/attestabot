@@ -1,6 +1,6 @@
 from glob import glob
 import pandas as pd
-import sys, os, logging, jsonlines, multiprocessing
+import sys, os, logging, json, jsonlines, multiprocessing
 from datetime import datetime
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
@@ -23,7 +23,7 @@ def finalize_and_save_dataframe(parquet_infile, df):
     outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
     df.to_parquet( outfile )
-    df.to_excel( outfile.replace('.parquet', '.xlsx') )
+    #df.to_excel( outfile.replace('.parquet', '.xlsx') )
     del df
 
 
@@ -84,8 +84,12 @@ def crawler_func(files):
 
     logging.info(f'done crawling part {suffix}, will now write existing urls to df')
 
-    with jsonlines.open(outfile) as jl_file:
-        for site in jl_file:
+    with open(outfile) as jl_file:
+        for line in jl_file.readlines():
+            try:
+                site = json.loads(line)
+            except:
+                continue
             if site['url'] == df_dict[site['parquet_file']].iloc[site['df_index']].url:
                 df_dict[site['parquet_file']].at[site['df_index'], 'url_exists'] = 'TRUE'
             else:
