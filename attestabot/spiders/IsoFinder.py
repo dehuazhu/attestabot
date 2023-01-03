@@ -74,12 +74,12 @@ class IsoFinder(CrawlSpider):
 
     def __init__(self, *args, **kwargs):
         super(IsoFinder, self).__init__(*args, **kwargs)
-        self.pkl_file        = kwargs.get('pkl_file')
+        self.parquet_file    = kwargs.get('parquet_file')
         self.request_counter = {}
         self.hit_counter     = {}
 
     def start_requests(self):
-        df = pd.read_pickle(self.pkl_file)
+        df = pd.read_parquet(self.parquet_file)
         for idx, (name,url) in df.query('url_exists=="TRUE"')[['name','url']].iterrows():
         #for url in (
         #        'https://wettstein-produktion.ch/', # ok
@@ -126,7 +126,7 @@ class IsoFinder(CrawlSpider):
     def parse_item(self, response):
         if hasattr(response, 'text'):
             item = {
-                    'pkl_file'              : self.pkl_file,
+                    'parquet_file'          : self.parquet_file,
                     'name'                  : response.meta['name'],
                     'company_homepage'      : response.meta['company_homepage'],
                     'suburl_with_iso_info'  : response.url,

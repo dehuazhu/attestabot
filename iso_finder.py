@@ -12,9 +12,9 @@ INPUT_FOLDER  = 'firms_website_finder'
 OUTPUT_FOLDER = 'firms_iso_finder'
 LOGFILE       = 'iso_finder.log'
 
-def sort_dataframes_and_save(pkl_infile, df_iso_finder):
+def sort_dataframes_and_save(parquet_infile, df_iso_finder):
     today = datetime.strftime(datetime.now(), '%Y-%m-%d')
-    df_website_finder = pd.read_pickle(pkl_infile).query('url_exists=="TRUE"').rename({'url': 'company_homepage'}, axis='columns')
+    df_website_finder = pd.read_parquet(parquet_infile).query('url_exists=="TRUE"').rename({'url': 'company_homepage'}, axis='columns')
     new_columns = []
     for column in df_website_finder.columns:
         if column in ('url_exists', 'url_checked_on'):
@@ -33,10 +33,10 @@ def sort_dataframes_and_save(pkl_infile, df_iso_finder):
     df_iso_finder['iso_certificate_parsed'] = 'FALSE'
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    outfile = os.path.basename(pkl_infile)
+    outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
-    #df.to_pickle( pkl_outfile )
-    df_iso_finder.to_excel( outfile.replace('.pkl','.xlsx') )
+    #df.to_parquet( parquet_outfile )
+    df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
     del df_iso_finder, df_website_finder
 
 
@@ -52,10 +52,10 @@ def main():
             }
 
     crawler_process = CrawlerProcess(crawler_settings)
-    files = glob( os.path.join(INPUT_FOLDER, 'firms*pkl') )
-    #files = ['test1115.pkl']
-    for pkl_file in files:
-        crawler_process.crawl(IsoFinder, pkl_file=pkl_file)
+    files = glob( os.path.join(INPUT_FOLDER, 'firms*parquet') )
+    #files = ['test1115.parquet']
+    for parquet_file in files:
+        crawler_process.crawl(IsoFinder, parquet_file=parquet_file)
 
     logging.info(f'Starting crawl jobs')
     crawler_process.start()
@@ -66,11 +66,11 @@ def main():
          df = pd.concat((pd.Series(row) for row in jl_file), axis=1).T.drop_duplicates()
 
     df_dict = {
-            pkl_file : df.query('pkl_file==@pkl_file').drop(columns='pkl_file')
-            for pkl_file in files
+            parquet_file : df.query('parquet_file==@parquet_file').drop(columns='parquet_file')
+            for parquet_file in files
             }
-    for pkl_infile, df in df_dict.items():
-        sort_dataframes_and_save(pkl_infile, df)
+    for parquet_infile, df in df_dict.items():
+        sort_dataframes_and_save(parquet_infile, df)
     #with multiprocessing.Pool() as pool:
     #    pool.starmap(sort_dataframes_and_save, df_dict.items())
     logging.info('all done')
