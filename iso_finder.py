@@ -35,34 +35,35 @@ def sort_dataframes_and_save(parquet_infile, df_iso_finder):
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
-    #df.to_parquet( parquet_outfile )
-    df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
+    df_iso_finder.to_parquet( outfile )
+    #df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
     del df_iso_finder, df_website_finder
 
 
-def main():
+def crawler_func(files):
+    suffix = 1 if 'firms_FR.parquet' in files else 2
+    outfile = OUTFILE_RAW.replace('.jl',f'_{suffix}.jl')
+    files = [os.path.join(INPUT_FOLDER, parquet_file) for parquet_file in files]
     crawler_settings = get_project_settings()
-    crawler_settings['LOG_FILE']             = LOGFILE
+    #crawler_settings['LOG_FILE']             = LOGFILE.replace('.log',f'_{suffix}.log')
     crawler_settings['LOG_ENABLED']          = True
     crawler_settings['LOG_FILE_APPEND']      = False
     crawler_settings['LOG_LEVEL']            = 'INFO'
     #crawler_settings['LOG_LEVEL']            = 'DEBUG'
     crawler_settings['FEEDS']                = {
-            OUTFILE_RAW : {'format': 'jsonlines'}
+            outfile : {'format': 'jsonlines'}
             }
 
     crawler_process = CrawlerProcess(crawler_settings)
-    files = glob( os.path.join(INPUT_FOLDER, 'firms*parquet') )
-    #files = ['test1115.parquet']
     for parquet_file in files:
         crawler_process.crawl(IsoFinder, parquet_file=parquet_file)
 
     logging.info(f'Starting crawl jobs')
     crawler_process.start()
 
-    logging.info('Done crawling, will now write raw results to Excel files')
+    logging.info(f'Done crawling part {suffix}, will now write raw results to Excel files')
 
-    with jsonlines.open(OUTFILE_RAW) as jl_file:
+    with jsonlines.open(outfile) as jl_file:
          df = pd.concat((pd.Series(row) for row in jl_file), axis=1).T.drop_duplicates()
 
     df_dict = {
@@ -73,6 +74,46 @@ def main():
         sort_dataframes_and_save(parquet_infile, df)
     #with multiprocessing.Pool() as pool:
     #    pool.starmap(sort_dataframes_and_save, df_dict.items())
+    logging.info(f'finished part {suffix}')
+
+
+def main():
+    files_1 = [
+            'firms_FR.parquet',
+            'firms_NW.parquet',
+            'firms_GE.parquet',
+            'firms_AR.parquet',
+            'firms_TI.parquet',
+            'firms_VS_Central.parquet',
+            'firms_VD.parquet',
+            'firms_BE.parquet',
+            'firms_TG.parquet',
+            'firms_BL.parquet',
+            'firms_UR.parquet',
+            'firms_GR.parquet',
+            'firms_GL.parquet',
+            'firms_SG.parquet'
+            ]
+    files_2 = [
+            'firms_BS.parquet',
+            'firms_OW.parquet',
+            'firms_ZH.parquet',
+            'firms_AG.parquet',
+            'firms_AI.parquet',
+            'firms_ZG.parquet',
+            'firms_SH.parquet',
+            'firms_VS_Bas.parquet',
+            'firms_LU.parquet',
+            'firms_SO.parquet',
+            'firms_VS_Ober.parquet',
+            'firms_SZ.parquet',
+            'firms_JU.parquet',
+            'firms_NE.parquet'
+            ]
+
+    with multiprocessing.Pool() as pool:
+        pool.map(crawler_func, [files_1, files_2])
+
     logging.info('all done')
 
 
