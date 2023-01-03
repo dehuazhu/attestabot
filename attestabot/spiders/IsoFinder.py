@@ -141,7 +141,12 @@ class IsoFinder(CrawlSpider):
                 if any(files := [link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))]):
                     self.hit_counter[hostname]['page_with_file'] += 1
                     item['suburl_has_iso_file'] = 'TRUE'
-                if any(text for text in response.css('*::text').getall() if ('ISO' in text or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO))):
+                if any(text for text in response.css('*::text').getall() if (
+                        ' ISO ' in text
+                        or text.startswith('ISO ')
+                        or text.endswith((' ISO', 'ISO.'))
+                        or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO)
+                        )):
                     self.hit_counter[hostname]['page_with_kw'] += 1
                     #if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
                     logging.debug(f'found page with keyword at {response.url}')
