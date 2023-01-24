@@ -68,5 +68,5 @@ class ZefixSpider(scrapy.Spider):
                 df = pd.DataFrame.from_dict([line for line in jlFile])
             df.insert(8, 'cantonId', cantonID)
             df.insert(9, 'canton', cantonName)
-            df.to_pickle(os.path.join(OUTDIR,f'{outfileName}.pkl'))
+            df.to_parquet(os.path.join(OUTDIR,f'{outfileName}.parquet'))
             os.remove(os.path.join(OUTDIR,f'{outfileName}.jl'))
