@@ -6,6 +6,7 @@ firms*
 *.xlsx
 *.docx
 *.tar.gz
+*.login
 
 # Byte-compiled / optimized / DLL files
 __pycache__
