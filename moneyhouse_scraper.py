@@ -18,6 +18,7 @@ def write_raw_output_to_files(parquet_file):
     with jsonlines.open(OUTFILE_RAW) as jl_file:
         rows = (pd.Series(row) for row in jl_file if row['parquet_file']==parquet_file)
         df_moneyhouse = pd.concat(rows, axis=1).T.drop(columns='parquet_file').set_index('df_index')
+    df_moneyhouse.rename(columns={'checked_on' : 'moneyhouse_checked_on'}, inplace=True)
     new_df = df.join(df_moneyhouse)
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
