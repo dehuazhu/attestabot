@@ -2,6 +2,7 @@ from scrapy import Request
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 import os, logging
+from datetime import datetime
 import pandas as pd
 from urllib.parse import urlparse
 from pdb import set_trace
@@ -66,7 +67,7 @@ class IsoFinder(CrawlSpider):
         if self.request_counter[hostname]>=MAX_REQUESTS_PER_HOST:
             logging.debug(f'Max requests ({self.request_counter[hostname]}) reached for {hostname}, dropping new requests.')
             return None
-        for attr in ('name', 'company_homepage'):
+        for attr in ('df_index', 'name', 'company_homepage'):
             request.meta[attr] = response.request.meta.get(attr)
         self.request_counter[hostname] += 1
         return request
@@ -80,34 +81,8 @@ class IsoFinder(CrawlSpider):
 
     def start_requests(self):
         df = pd.read_parquet(self.parquet_file)
-        for idx, (name,url) in df.query('url_exists=="TRUE"')[['name','url']].iterrows():
-        #for url in (
-        #        'https://wettstein-produktion.ch/', # ok
-        #        'https://juice.world/', #ok
-        #        'http://www.designwerk.com/', #error 510
-        #        'https://www.alz-maschinen.ch/', #ok, needs DEPTH_LIMIT=2
-        #        'https://aa-praezisionsmechanik.ch/', #no: contains only a png with no keyword in the file name and no reference to keywords in the text
-        #        'https://www.almutechag.ch/', #ok
-        #        'https://www.blue-o.ch/', #ok
-        #        'https://www.hjakober.ch/', #ok
-        #        'https://www.enzler.com', #ok, needs DEPTH_LIMIT=3
-        #        'https://www.brtec.ch/', #ok
-        #        'https://www.guyan-trans.ch', #ok, finds pdfs and keywords but no logos
-        #        'https://www.swissestetic.ch/', #error 510
-        #        'https://realestate-ch.apleona.com/', #ok, needs DEPTH_LIMIT=4 for pdfs
-        #        'https://joos-metallbau.ch', #ok
-        #        'https://www.blumatech.ch/', #ok
-        #        'https://www.schmidlinag.ch', #ok
-        #        'https://www.leuthold-metallbau.ch', #ok
-        #        'http://www.belloli.ch', #ok
-        #        'https://www.rinoweder.ch/', #ok, false positive images with 'Janisol' in the name
-        #        'https://www.kazi-metall.ch', #ok but very slow, works with with breadth-first-order search and MAX_REQUESTS_PER_HOST
-        #        'https://contreag.ch/', #ok
-        #        'https://www.new-process.ch', #ok
-        #        'https://www.weita.ch', #ok but very slow
-        #        'https://www.airproduct.ch', #ok
-        #        'https://schmid-terewa.ch/', #error 510
-        #        ):
+        #for idx, (name,url) in df.query('url_exists=="TRUE"')[['name','url']].iterrows():
+        for idx, (name,url) in df[df.homepage.notna()][['name','homepage']].iterrows():
             hostname = urlparse(url).hostname
             self.request_counter[hostname] = 0
             self.hit_counter[hostname]     = {
@@ -116,6 +91,7 @@ class IsoFinder(CrawlSpider):
                     'page_with_logo' : 0,
                     }
             meta = {
+                    'df_index'         : idx,
                     #'name'      : hostname, #FIXME
                     'name'             : name,
                     'company_homepage' : url,
@@ -124,11 +100,14 @@ class IsoFinder(CrawlSpider):
             yield Request(url, meta=meta)
 
     def parse_item(self, response):
+        today = datetime.strftime(datetime.now(), '%Y-%m-%d')
         if hasattr(response, 'text'):
             item = {
                     'parquet_file'          : self.parquet_file,
-                    'name'                  : response.meta['name'],
-                    'company_homepage'      : response.meta['company_homepage'],
+                    'df_index'              : response.meta['df_index'],
+                    'iso_finder_checked_on' : today,
+                    #'name'                  : response.meta['name'],
+                    #'homepage'              : response.meta['company_homepage'],
                     'suburl_with_iso_info'  : response.url,
                     'suburl_has_iso_file'   : 'FALSE',
                     'suburl_is_iso_file'    : 'FALSE',

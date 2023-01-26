@@ -8,36 +8,34 @@ from attestabot.spiders.IsoFinder import IsoFinder
 from pdb import set_trace
 
 OUTFILE_RAW   = 'iso_finder_raw.jl'
-INPUT_FOLDER  = 'firms_website_finder'
+#INPUT_FOLDER  = 'firms_website_finder'
+INPUT_FOLDER  = 'firms_moneyhouse'
 OUTPUT_FOLDER = 'firms_iso_finder'
 LOGFILE       = 'iso_finder.log'
 
-def sort_dataframes_and_save(parquet_infile, df_iso_finder):
-    today = datetime.strftime(datetime.now(), '%Y-%m-%d')
-    df_website_finder = pd.read_parquet(parquet_infile).query('url_exists=="TRUE"').rename({'url': 'company_homepage'}, axis='columns')
+def sort_dataframes_and_save(parquet_infile, outfile_raw):
+    df_moneyhouse = pd.read_parquet(parquet_infile)
+    df_moneyhouse = df_moneyhouse[df_moneyhouse.homepage.notna()]
+    with jsonlines.open(outfile_raw) as jl_file:
+        rows = (pd.Series(row) for row in jl_file if row['parquet_file']==parquet_infile)
+        df_iso_finder = pd.concat(rows, axis=1).T.drop(columns='parquet_file')
     new_columns = []
-    for column in df_website_finder.columns:
-        if column in ('url_exists', 'url_checked_on'):
-            continue
+    for column in df_moneyhouse.columns:
         if column not in df_iso_finder:
             new_columns += [column]
             df_iso_finder[column] = None
-    for idx, (name,company_homepage) in df_iso_finder[['name','company_homepage']].drop_duplicates().iterrows():
-        new_columns_values = df_website_finder.query('name==@name & company_homepage==@company_homepage')
-        if len(new_columns_values)>1: logging.warning(f'Problem with {name}, url: {company_homepage}')
-        df_iso_finder.loc[(df_iso_finder['name']==name) & (df_iso_finder['company_homepage']==company_homepage), new_columns] = new_columns_values.iloc[0][new_columns].values
-
-    df_iso_finder.sort_values(by=['name','company_homepage'], ignore_index=True, inplace=True)
-    df_iso_finder = df_iso_finder[['name', 'ehraid', 'uid', 'uidFormatted', 'chid', 'chidFormatted', 'legalSeatId', 'legalSeat', 'cantonId', 'canton', 'registerOfficeId', 'legalFormId', 'status', 'rabId', 'shabDate', 'deleteDate', 'cantonalExcerptWeb', 'company_homepage', 'suburl_with_iso_info', 'suburl_has_iso_file', 'suburl_is_iso_file', 'suburl_has_keyword', 'suburl_has_logo']].copy()
-    df_iso_finder['iso_checked_on'] = today
-    df_iso_finder['iso_certificate_parsed'] = 'FALSE'
+    for idx, row_moneyhouse in df_moneyhouse.iterrows():
+        df_iso_finder.loc[df_iso_finder['df_index']==idx, new_columns]
+        df_iso_finder.loc[df_iso_finder['df_index']==idx, new_columns] = row_moneyhouse[new_columns].values
+    df_iso_finder.sort_values(by=['df_index'], ignore_index=True, inplace=True)
+    df_iso_finder = df_iso_finder[['name', 'ehraid', 'uid', 'uidFormatted', 'chid', 'chidFormatted', 'legalSeatId', 'legalSeat', 'cantonId', 'canton', 'registerOfficeId', 'legalFormId', 'status', 'rabId', 'shabDate', 'deleteDate', 'cantonalExcerptWeb', 'moneyhouse_checked_on', 'address', 'tel', 'mail', 'homepage', 'other', 'iso_finder_checked_on', 'suburl_with_iso_info', 'suburl_has_iso_file', 'suburl_is_iso_file', 'suburl_has_keyword', 'suburl_has_logo']].copy()
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
     df_iso_finder.to_parquet( outfile )
-    #df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
-    del df_iso_finder, df_website_finder
+    df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
+    del df_moneyhouse, df_iso_finder
 
 
 def crawler_func(files):
@@ -47,7 +45,7 @@ def crawler_func(files):
     crawler_settings = get_project_settings()
     #crawler_settings['LOG_FILE']             = LOGFILE.replace('.log',f'_{suffix}.log')
     crawler_settings['LOG_ENABLED']          = True
-    crawler_settings['LOG_FILE_APPEND']      = False
+    #crawler_settings['LOG_FILE_APPEND']      = False
     crawler_settings['LOG_LEVEL']            = 'INFO'
     #crawler_settings['LOG_LEVEL']            = 'DEBUG'
     crawler_settings['FEEDS']                = {
@@ -63,17 +61,10 @@ def crawler_func(files):
 
     logging.info(f'Done crawling part {suffix}, will now write raw results to Excel files')
 
-    with jsonlines.open(outfile) as jl_file:
-         df = pd.concat((pd.Series(row) for row in jl_file), axis=1).T.drop_duplicates()
-
-    df_dict = {
-            parquet_file : df.query('parquet_file==@parquet_file').drop(columns='parquet_file')
-            for parquet_file in files
-            }
-    for parquet_infile, df in df_dict.items():
-        sort_dataframes_and_save(parquet_infile, df)
+    for parquet_infile in files:
+        sort_dataframes_and_save(parquet_infile, outfile)
     #with multiprocessing.Pool() as pool:
-    #    pool.starmap(sort_dataframes_and_save, df_dict.items())
+    #    pool.map(sort_dataframes_and_save, files)
     logging.info(f'finished part {suffix}')
 
 
