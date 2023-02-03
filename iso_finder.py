@@ -19,22 +19,22 @@ def sort_dataframes_and_save(parquet_infile, outfile_raw):
     with jsonlines.open(outfile_raw) as jl_file:
         rows = (pd.Series(row) for row in jl_file if row['parquet_file']==parquet_infile)
         df_iso_finder = pd.concat(rows, axis=1).T.drop(columns='parquet_file')
-    new_columns = []
-    for column in df_moneyhouse.columns:
-        if column not in df_iso_finder:
-            new_columns += [column]
-            df_iso_finder[column] = None
-    for idx, row_moneyhouse in df_moneyhouse.iterrows():
-        df_iso_finder.loc[df_iso_finder['df_index']==idx, new_columns]
-        df_iso_finder.loc[df_iso_finder['df_index']==idx, new_columns] = row_moneyhouse[new_columns].values
-    df_iso_finder.sort_values(by=['df_index'], ignore_index=True, inplace=True)
-    df_iso_finder = df_iso_finder[['name', 'ehraid', 'uid', 'uidFormatted', 'chid', 'chidFormatted', 'legalSeatId', 'legalSeat', 'cantonId', 'canton', 'registerOfficeId', 'legalFormId', 'status', 'rabId', 'shabDate', 'deleteDate', 'cantonalExcerptWeb', 'moneyhouse_checked_on', 'address', 'tel', 'mail', 'homepage', 'other', 'iso_finder_checked_on', 'suburl_with_iso_info', 'suburl_has_iso_file', 'suburl_is_iso_file', 'suburl_has_keyword', 'suburl_has_logo']].copy()
+    df_moneyhouse['iso_finder_checked_on'] = df_iso_finder.iloc[0]['iso_finder_checked_on']
+    df_moneyhouse['has_iso_info'] = 'FALSE'
+    for i in range(1,4):
+        df_moneyhouse[f'found_iso_{i}'] = 'FALSE'
+    for idx in df_moneyhouse.index:
+        subdf_iso_finder = df_iso_finder.query('df_index==@idx').sort_values(by=['suburl_is_iso_file','suburl_has_logo','suburl_has_keyword'], ascending=False)[:3]
+        if len(subdf_iso_finder)>0:
+            df_moneyhouse.loc[idx, 'has_iso_info'] = 'TRUE'
+            for i, (_, row) in enumerate(subdf_iso_finder.iterrows(), start=1):
+                df_moneyhouse.loc[idx, f'found_iso_{i}'] = row.suburl_with_iso_info
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     outfile = os.path.basename(parquet_infile)
     outfile = os.path.join(OUTPUT_FOLDER, outfile)
-    df_iso_finder.to_parquet( outfile )
-    df_iso_finder.to_excel( outfile.replace('.parquet','.xlsx') )
+    df_moneyhouse.to_parquet( outfile )
+    df_moneyhouse.to_excel( outfile.replace('.parquet','.xlsx') )
     del df_moneyhouse, df_iso_finder
 
 

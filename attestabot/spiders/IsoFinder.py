@@ -27,6 +27,10 @@ ALLOWED_EXTENSIONS = (
         'jpeg',
         )
 
+BLACKLIST_FILE = 'blacklist.txt'
+with open(BLACKLIST_FILE) as f:
+    BLACKLIST_KEYWORDS = [word.strip() for word in f.readlines()]
+
 
 class IsoFinder(CrawlSpider):
     name = 'iso-finder'
@@ -117,7 +121,7 @@ class IsoFinder(CrawlSpider):
             #hostname = urlparse(response.url).hostname
             hostname = urlparse(response.meta['company_homepage']).hostname
             if sum(self.hit_counter[hostname].values())<MAX_HITS_PER_HOST_TOTAL:
-                if any(files := [link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE))]):
+                if any(files := [link for link in response.css('*::attr(href)').getall() if (urlparse(link).path.lower().endswith(ALLOWED_EXTENSIONS) and any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE) and not any(word in link.lower() for word in BLACKLIST_KEYWORDS))]):
                     self.hit_counter[hostname]['page_with_file'] += 1
                     item['suburl_has_iso_file'] = 'TRUE'
                 if any(text for text in response.css('*::text').getall() if (
@@ -125,12 +129,14 @@ class IsoFinder(CrawlSpider):
                         or text.startswith('ISO ')
                         or text.endswith((' ISO', 'ISO.'))
                         or any(kw in text.lower() for kw in KEYWORDS_CERTIFICATE_NO_ISO)
-                        )):
+                        )
+                        and not any(word in text.lower() for word in BLACKLIST_KEYWORDS)
+                        ):
                     self.hit_counter[hostname]['page_with_kw'] += 1
                     #if self.hit_counter[hostname]['page_with_kw']<=MAX_HITS_PER_HOST_PAGE_WITH_KW:
                     logging.debug(f'found page with keyword at {response.url}')
                     item['suburl_has_keyword'] = 'TRUE'
-                if any(link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE)):
+                if any(link for link in response.css('img').xpath('@src').getall() if any(kw in link.lower() for kw in KEYWORDS_CERTIFICATE) and not any(word in link.lower() for word in BLACKLIST_KEYWORDS)):
                     self.hit_counter[hostname]['page_with_logo'] += 1
                     #if self.hit_counter[hostname]['page_with_logo']<=MAX_HITS_PER_HOST_PAGE_WITH_IMG:
                     logging.debug(f'found page with logo at {response.url}')
