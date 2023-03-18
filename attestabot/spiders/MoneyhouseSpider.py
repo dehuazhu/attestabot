@@ -1,4 +1,4 @@
-import scrapy
+import scrapy, logging
 import pandas as pd
 from datetime import datetime
 from pdb import set_trace
@@ -11,6 +11,7 @@ class MoneyhouseSpider(scrapy.Spider):
         self.parquet_file          = parquet_file
         self.starting_line         = starting_line
         self.max_requests_per_file = max_requests_per_file
+        logging.info(f'Initialized Spider for {parquet_file}')
 
     def start_requests(self):
         url  = 'https://service.moneyhouse.ch/api/login'
@@ -20,6 +21,7 @@ class MoneyhouseSpider(scrapy.Spider):
             pwd   = lines[1].strip()
         body = f'{{"email":"{user}","password":"{pwd}"}}'
 
+        logging.debug(f'Logging in for {self.parquet_file}')
         yield scrapy.Request(
                 url         = url,
                 method      = 'POST',
@@ -41,9 +43,10 @@ class MoneyhouseSpider(scrapy.Spider):
         search_url = lambda query: f'https://www.moneyhouse.ch/de/search?q={query}'
         df = pd.read_parquet(self.parquet_file)
 
-        start = self.starting_line
-        stop  = start + self.max_requests_per_file
-        for idx, firm in df[start:stop].iterrows():
+        #start = self.starting_line
+        #stop  = start + self.max_requests_per_file
+        #for idx, firm in df[start:stop].iterrows():
+        for idx, firm in df.iterrows():
             search_str = firm.chid
             url  = search_url(search_str)
             meta = {
@@ -51,6 +54,7 @@ class MoneyhouseSpider(scrapy.Spider):
                     'df_index'     : idx,
                     }
 
+            logging.debug(f'Submitting request to {url} for {self.parquet_file}')
             yield scrapy.Request(
                     url         = url,
                     method      = 'GET',

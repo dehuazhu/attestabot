@@ -36,7 +36,7 @@ def main():
     crawler_settings['LOG_ENABLED']    = True
     #crawler_settings['LOG_FILE']       = LOGFILE
     crawler_settings['LOG_LEVEL']      = 'INFO'
-    crawler_settings['DOWNLOAD_DELAY'] = 2
+    crawler_settings['DOWNLOAD_DELAY'] = 1
     crawler_settings['FEEDS']          = {
             OUTFILE_RAW : {
                 'format'    : 'jsonlines',
@@ -50,12 +50,12 @@ def main():
         crawler_process.crawl(
                 MoneyhouseSpider,
                 parquet_file          = parquet_file,
-                starting_line         = STARTING_LINE,
-                max_requests_per_file = MAX_REQUESTS_PER_FILE
+                #starting_line         = STARTING_LINE,
+                #max_requests_per_file = MAX_REQUESTS_PER_FILE
                 )
 
     logging.info(f'Starting crawl jobs')
-    #crawler_process.start()
+    crawler_process.start()
 
     logging.info(f'Done crawling, will now write raw results to Excel files')
 
